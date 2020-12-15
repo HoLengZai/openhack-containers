@@ -1,33 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: poi-deployment
+  name: user-java-deployment
   labels:
-    app: poi-deployment
+    app: user-java-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: poi-pod
+      app: user-java-pod
   template:
     metadata:
       labels:
-        app: poi-pod
+        app: user-java-pod
     spec:
       containers:
-      - name: poi
-        image: registrytzs2899.azurecr.io/poi:v0.0.1
+      - name: user-java
+        image: registrytzs2899.azurecr.io/user-java:v0.0.1
         ports:
         - containerPort: 80
         livenessProbe:
           httpGet:
-            path: /api/poi/healthcheck
+            path: /api/user-java/healthcheck
             port: 80
           initialDelaySeconds: 3
           periodSeconds: 3
         readinessProbe:
           httpGet:
-            path: /api/poi/healthcheck
+            path: /api/user-java/healthcheck
             port: 80
           initialDelaySeconds: 3
           periodSeconds: 3
@@ -44,10 +44,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: poi
+  name: user-java
 spec:
   selector:
-    app: poi-pod
+    app: user-java-pod
   ports:
     - protocol: TCP
       port: 80

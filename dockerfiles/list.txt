@@ -1,9 +1,10 @@
 1.1 create AKS -> ACR and AZURE SQL access
     RG : teamResources
-create_command: az aks create --resource-group teamResources --name ohaks --node-count 3 --generate-ssh-keys
+create_command:
+az aks create --resource-group teamResources --name ohaks2 --node-count 3 --generate-ssh-keys --attach-acr registrytzs2899
 
-az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --enable-addons monitoring --generate-ssh-keys
-
+configure ACR
+az aks update -n ohaks2 -g teamResources --attach-acr registrytzs2899
 
 1.2 create AZURE SQL
   Azure SQL FDQN: sqlservertzs2899.database.windows.net
@@ -14,7 +15,7 @@ az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 
 
 --- connection to cluster
 az login
-az aks get-credentials --subscription OTA-PRD-1309 -g teamResources -n ohaks --context openhack --admin
+az aks get-credentials --subscription OTA-PRD-1309 -g teamResources -n ohaks2 --context openhack --admin
 kubectl get nodes
 
 

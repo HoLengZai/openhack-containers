@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: poi-deployment
+  name: tripviewer-deployment
   labels:
-    app: poi-deployment
+    app: tripviewer-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: poi-pod
+      app: tripviewer-pod
   template:
     metadata:
       labels:
-        app: poi-pod
+        app: tripviewer-pod
     spec:
       containers:
-      - name: poi
-        image: registrytzs2899.azurecr.io/poi:v0.0.1
+      - name: tripviewer
+        image: registrytzs2899.azurecr.io/tripviewer:v0.0.1
         ports:
         - containerPort: 80
         livenessProbe:
@@ -40,14 +40,18 @@ spec:
           value: "lQ9yh5Oy4"
         - name: SQL_DBNAME
           value: "mydrivingDB"
+        - name: USERPROFILE_API_ENDPOINT
+          value: "http://userprofile.default.svc.cluster.local"
+        - name: TRIPS_API_ENDPOINT
+          value: "http://trips.default.svc.cluster.local"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: poi
+  name: tripviewer
 spec:
   selector:
-    app: poi-pod
+    app: tripviewer-pod
   ports:
     - protocol: TCP
       port: 80
