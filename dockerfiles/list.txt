@@ -1,0 +1,26 @@
+1.1 create AKS -> ACR and AZURE SQL access
+    RG : teamResources
+create_command: az aks create --resource-group teamResources --name ohaks --node-count 3 --generate-ssh-keys
+
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --enable-addons monitoring --generate-ssh-keys
+
+
+1.2 create AZURE SQL
+  Azure SQL FDQN: sqlservertzs2899.database.windows.net
+  Azure SQL Server User: sqladmintZs2899
+  Azure SQL Server Pass: lQ9yh5Oy4
+  Azure SQL Server Database: mydrivingDB
+
+
+--- connection to cluster
+az login
+az aks get-credentials --subscription OTA-PRD-1309 -g teamResources -n ohaks --context openhack --admin
+kubectl get nodes
+
+
+2.yaml de deploy
+ 2.1 POI
+ 2.2 Trips
+ 2.3 User-java
+ 2.4 user profile
+ 2.5 trip viewer
