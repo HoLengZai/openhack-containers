@@ -1,0 +1,59 @@
+# GRP: web-users - NS : web - Role : edit
+# GRP: web-users - NS : api - Role : view
+# GRP: api-users - NS : web - Role : view
+# GRP: api-users - NS : api - Role : edit
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: web-user-access-web
+  namespace: web
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: edit
+subjects:
+- kind: Group
+# aad group "web-users" objectId
+  name: 408f9575-cc0f-4801-8ea7-e7b7c5139c37
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: web-user-access-api
+  namespace: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: view
+subjects:
+- kind: Group
+# aad group "web-users" objectId
+  name: 408f9575-cc0f-4801-8ea7-e7b7c5139c37
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: api-user-access-web
+  namespace: web
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: view
+subjects:
+- kind: Group
+# aad group "api-users" objectId
+  name: 4997cb5e-e3a3-49d2-882d-964c73f32eb8
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: api-user-access-api
+  namespace: api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: edit
+subjects:
+- kind: Group
+# aad group "api-users" objectId
+  name: 4997cb5e-e3a3-49d2-882d-964c73f32eb8

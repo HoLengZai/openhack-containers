@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tripviewer-deployment
+  namespace: web
   labels:
     app: tripviewer-deployment
 spec:
@@ -41,14 +42,15 @@ spec:
         - name: SQL_DBNAME
           value: "mydrivingDB"
         - name: USERPROFILE_API_ENDPOINT
-          value: "http://userprofile.default.svc.cluster.local"
+          value: "http://userprofile.api.svc.cluster.local"
         - name: TRIPS_API_ENDPOINT
-          value: "http://trips.default.svc.cluster.local"
+          value: "http://trips.api.svc.cluster.local"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: tripviewer
+  namespace: web
 spec:
   selector:
     app: tripviewer-pod
