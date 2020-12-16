@@ -25,3 +25,8 @@ kubectl get nodes
  2.3 User-java
  2.4 user profile
  2.5 trip viewer
+
+
+ 3. portforward
+
+ kubectl port-forward tripvewer 80:80

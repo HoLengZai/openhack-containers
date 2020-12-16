@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: tripviewer
-        image: registrytzs2899.azurecr.io/tripviewer:v0.0.1
+        image: registrytzs2899.azurecr.io/tripviewer:0.0.1
         ports:
         - containerPort: 80
         livenessProbe:
