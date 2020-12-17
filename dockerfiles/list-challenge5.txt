@@ -35,4 +35,8 @@ az aks get-credentials --resource-group teamResources --name ohaks31
 az aks get-credentials --resource-group teamResources --name ohaks31 --overwrite-existing
 
 3. Mise en oeuvre de l'autoscaling AKS
-az aks update --resource-group teamResources --name ohaks31 --update-cluster-autoscaler --min-count 2 --max-count 10
+az aks update --resource-group teamResources --name ohaks31 --update-cluster-autoscaler --min-count 2 --max-count 3
+
+
+4. creation d'un node pool
+az aks nodepool add -g teamResources --node-vm-size Standard_D13_v2 -n bigmachine --cluster-name ohaks31 --node-osdisk-type Ephemeral --node-osdisk-size 48

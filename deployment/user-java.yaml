@@ -31,8 +31,8 @@ spec:
               memory: "1Gi"
               cpu: "250m"
             limits:
-              memory: "2Gi"
-              cpu: "1000m"
+              memory: "4Gi"
+              cpu: "2"
           readinessProbe:
             httpGet:
               path: /api/user-java/healthcheck
