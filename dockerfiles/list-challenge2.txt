@@ -1,7 +1,17 @@
 1.1 create AKS -> ACR and AZURE SQL access
     RG : teamResources
 create_command:
-az aks create --resource-group teamResources --name ohaks2 --node-count 3 --generate-ssh-keys --attach-acr registrytzs2899
+
+az ad group create --display-name AKSHackerGroup --mail-nickname AKSHackerGroup
+
+az aks create \
+  --resource-group teamResources \
+  --name ohaks2 \
+  --node-count 3 \
+  --generate-ssh-keys \
+  --attach-acr registrytzs2899 \
+  --enable-aad \
+  --aad-admin-group-object-ids d993432e-6a04-49f3-86a5-842102b42e5b
 
 configure ACR
 az aks update -n ohaks2 -g teamResources --attach-acr registrytzs2899

@@ -1,0 +1,133 @@
+1. RBAC & Azure AD
+
+# Create Azure AD Group :   
+az ad group create --display-name AKSHackerGroup --mail-nickname AKSHackerGroup
+
+# Get Ad user objectId
+az ad user list --query '[].{displayName:displayName,userPrincipalName:userPrincipalName,objectId:objectId}' -o table
+DisplayName    UserPrincipalName                         ObjectId
+-------------  ----------------------------------------  ------------------------------------
+api-dev        apidev@OTAPRD1309ops.onmicrosoft.com      c4b86120-64f7-41da-a235-0cfdb559abdb
+Hacker One     hacker1k9r@OTAPRD1309ops.onmicrosoft.com  1fd9eebd-526b-4ff8-9e95-06e9fe1e9d43
+Hacker Two     hacker21xj@OTAPRD1309ops.onmicrosoft.com  dd3fffa9-c809-4476-8f78-544eee798425
+Hacker Three   hacker3omj@OTAPRD1309ops.onmicrosoft.com  8069b651-dabb-4740-b81c-e531cec4aeb6
+Hacker Four    hacker4gil@OTAPRD1309ops.onmicrosoft.com  cbaa3ec9-2a91-420f-bfe1-19f03efeb939
+Hacker Five    hacker5vl0@OTAPRD1309ops.onmicrosoft.com  1281bddd-023e-4784-8032-44b2e31f3ae8
+Hacker Six     hacker6ldk@OTAPRD1309ops.onmicrosoft.com  3929117d-e3a4-4918-8b67-d0830e0f493c
+user_3Ff3A     user_3Ff3A@OTAPRD1309ops.onmicrosoft.com  13a8e8a7-b09f-420a-a84d-6df1e842c8ec
+web-dev        webdev@OTAPRD1309ops.onmicrosoft.com      9b561003-8e67-47e0-9138-244ae1e3d0f0
+
+
+# TEST : Enable AKS-managed Azure AD Integration on your existing cluster
+az aks update -g MyResourceGroup -n MyManagedCluster --enable-aad --aad-admin-group-object-ids <id-1> [--aad-tenant-id <id>]
+
+# Create an AKS-managed Azure AD cluster
+# https://docs.microsoft.com/en-us/azure/aks/managed-aad
+
+az aks create \
+  --resource-group teamResources \
+  --name ohaks3 \
+  --node-count 1 \
+  --generate-ssh-keys \
+  --attach-acr registrytzs2899 \
+  --enable-aad \
+  --aad-admin-group-object-ids d993432e-6a04-49f3-86a5-842102b42e5b
+
+# ADD Member to a group (for each member):    
+# https://docs.microsoft.com/bs-cyrl-ba/cli/azure/ad/group/member?view=azure-cli-latest#az_ad_group_member_add
+
+az ad group member add --group AKSHackerGroup \
+                       --member-id dd3fffa9-c809-4476-8f78-544eee798425
+
+# Add Role Assignment   
+# https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-cli
+
+az role assignment create --assignee "{assignee}" \
+--role "{roleNameOrId}" \
+--scope "/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{providerName}/{resourceType}/{resourceSubType}/{resourceName}" 
+
+# Access an Azure AD enabled cluster
+az aks get-credentials --resource-group teamResources --name ohaks3
+# get nodes list
+kubectl get nodes
+# get cluter roles binding
+kubectl get clusterrolebindings 
+
+# Delete a cluster
+az aks delete --resource-group teamResources --name ohakstest
+az aks delete --resource-group teamResources --name ohaks2
+az aks delete --resource-group teamResources --name ohaks3
+
+2. VNET
+
+
+# create a new subnet
+az network vnet subnet create -g teamResources --vnet-name vnet -n aks-subnet --address-prefixes 10.2.1.0/24
+
+# Get azure snet resource id
+az network vnet subnet list \
+    --resource-group teamResources \
+    --vnet-name vnet \
+    --query "[0].id" --output tsv
+
+# Create a new aks cluster with 1 node, attach to private azure container registry (acr), add aad binding, add aad group created previously
+az aks create \
+  --resource-group teamResources \
+  --name ohaks31 \
+  --node-count 1 \
+  --generate-ssh-keys \
+  --attach-acr registrytzs2899 \
+  --enable-aad \
+  --aad-admin-group-object-ids d993432e-6a04-49f3-86a5-842102b42e5b \
+  --network-plugin azure \
+  --vnet-subnet-id /subscriptions/ce00d046-13be-4fb2-b358-8c7eeba5daa7/resourceGroups/teamResources/providers/Microsoft.Network/virtualNetworks/vnet/subnets/aks-subnet \
+  --dns-service-ip 10.2.2.10 \
+  --service-cidr 10.2.2.0/24
+# It seems that service-cidr ip range is use internally in the cluster. We cannot see it on Azure Portal Vnet/subnet
+
+# Plan d'adressage
+# 10.2.0.0/24 # VM (vm-subnet)
+# 10.2.1.0/24 # Nodes & Pods (aks-subnet)
+# 10.2.2.0/24 # Services (...)
+
+# Deploy pods & services
+kubectl apply -f *.yaml
+
+# TEST connection from vm to service tripviewer
+az network watcher test-ip-flow -g teamResources --direction Outbound \
+    --protocol TCP --local 10.2.0.4:* --remote 10.2.2.142:80 --vm internal-vm
+az network watcher test-ip-flow -g teamResources --direction Inbound \
+    --protocol TCP --local 10.2.0.4:80 --remote 10.2.2.142:* --vm internal-vm
+
+# TEST connection from vm to pod (A TESTER APRES MIAM)
+az network watcher test-ip-flow -g teamResources --direction Outbound \
+    --protocol TCP --local 10.2.0.4:* --remote 10.2.1.29:80 --vm internal-vm
+az network watcher test-ip-flow -g teamResources --direction Inbound \
+    --protocol TCP --local 10.2.0.4:80 --remote 10.2.1.29:* --vm internal-vm
+
+#Simulator url:simulatorregistrytzs2899.northeurope.azurecontainer.io
+
+#internal-vm (10.2.0.4)
+#username: openhack-adm
+#password: Password123!
+
+kubectl get service
+#NAME          TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+#kubernetes    ClusterIP   10.2.2.1     <none>        443/TCP   37m
+#poi           ClusterIP   10.2.2.237   <none>        80/TCP    32m
+#trips         ClusterIP   10.2.2.93    <none>        80/TCP    32m
+#tripviewer    ClusterIP   10.2.2.142   <none>        80/TCP    32m
+#user-java     ClusterIP   10.2.2.102   <none>        80/TCP    32m
+#userprofile   ClusterIP   10.2.2.205   <none>        80/TCP    32m
+
+kubectl
+# get pod ip address
+kubectl describe pod poi-deployment-c9b858849-xt6vv
+# launch a sh command in the pod
+kubectl exec -it poi-deployment-c9b858849-xt6vv -- /bin/sh
+# launch a ping command in the pod
+kubectl exec -it poi-deployment-c9b858849-xt6vv -- ping 10.2.0.4
+
+# poi pod to aks service
+kubectl exec -it poi-deployment-c9b858849-xt6vv -- curl 10.2.2.142
+kubectl exec -it poi-deployment-c9b858849-xt6vv -- curl tripviewer.default.svc.cluster.local

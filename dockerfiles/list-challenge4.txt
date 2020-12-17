@@ -1,0 +1,179 @@
+# Reference
+# Get Ad user objectId
+az ad user list --query '[].{displayName:displayName,userPrincipalName:userPrincipalName,objectId:objectId}' -o table
+DisplayName    UserPrincipalName                         ObjectId
+-------------  ----------------------------------------  ------------------------------------
+api-dev        apidev@OTAPRD1309ops.onmicrosoft.com      c4b86120-64f7-41da-a235-0cfdb559abdb
+Api-dev PW: gY6yd4Vj7
+web-dev        webdev@OTAPRD1309ops.onmicrosoft.com      9b561003-8e67-47e0-9138-244ae1e3d0f0
+Web-dev PW: iB8uq9Ri2
+
+# Create a new aks cluster with 1 node, attach to private azure container registry (acr), add aad binding, add aad group created previously
+az aks create \
+  --resource-group teamResources \
+  --name ohaks31 \
+  --node-count 1 \
+  --generate-ssh-keys \
+  --attach-acr registrytzs2899 \
+  --enable-aad \
+  --aad-admin-group-object-ids d993432e-6a04-49f3-86a5-842102b42e5b \
+  --network-plugin azure \
+  --vnet-subnet-id /subscriptions/ce00d046-13be-4fb2-b358-8c7eeba5daa7/resourceGroups/teamResources/providers/Microsoft.Network/virtualNetworks/vnet/subnets/aks-subnet \
+  --dns-service-ip 10.2.2.10 \
+  --service-cidr 10.2.2.0/24
+
+  # 1 - namespace
+    create 1-namespaces.yaml
+    add namespace to deployement and services ?
+
+  # 2 - role based : web & api
+    + Create Azure AD Group :
+```
+az ad group create --display-name web-users --mail-nickname web-users # 408f9575-cc0f-4801-8ea7-e7b7c5139c37
+az ad group create --display-name api-users --mail-nickname api-users # 4997cb5e-e3a3-49d2-882d-964c73f32eb8
+```
+    + attach users to groups
+# Get Ad user objectId
+az ad user list --query '[].{displayName:displayName,userPrincipalName:userPrincipalName,objectId:objectId}' -o table
+# ADD Members (web-dev and api-dev) to a group (for each member):    
+```
+az ad group member add --group web-users \
+                       --member-id 9b561003-8e67-47e0-9138-244ae1e3d0f0
+az ad group member add --group api-users \
+                       --member-id c4b86120-64f7-41da-a235-0cfdb559abdb
+```
+
+
+    + Create the AKS cluster resources for SREs :
+      https://docs.microsoft.com/en-us/azure/aks/azure-ad-rbac#create-the-aks-cluster-resources-for-sres
+        - NS : api - Role : view
+        - NS : api - Role : edit
+        - NS : web - Role : view
+        - NS : web - Role : edit
+web-dev user (View access for API resources, Edit access for Web resources).
+
+api-dev user (View access to Web resources, Edit access to API resources)
+
+```
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-user-full-access
+  namespace: sre
+rules:
+- apiGroups: ["", "extensions", "apps"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
+  verbs: ["*"]
+```
+        - RoleBinding
+```
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sre-user-access
+  namespace: web
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sre-user-full-access
+subjects:
+- kind: Group
+  namespace: sre
+  name: 408f9575-cc0f-4801-8ea7-e7b7c5139c37
+```
+# subscriptions ID : ce00d046-13be-4fb2-b358-8c7eeba5daa7
+
+# Add the following role to the user "webdev" to let him "get-credentials" to the cluster
+az role assignment create --role "Azure Kubernetes Service Cluster User Role" --assignee "webdev@OTAPRD1309ops.onmicrosoft.com"
+az role assignment create --role "Azure Kubernetes Service Cluster User Role" --assignee "apidev@OTAPRD1309ops.onmicrosoft.com"
+
+#login with user web-user
+az login
+
+# update credentials
+az aks get-credentials --resource-group teamResources --name ohaks31 --overwrite-existing
+
+  # 3 - keyvault : https://docs.microsoft.com/en-us/azure/key-vault/general/quick-create-cli
+az keyvault create --name "openhack-kv-team5-nowel" --resource-group "teamResources" --location "northeurope"
+    Tip: Stick to working with Service Principals and NOT pod identities for this challenge.
+
+
+# HELM install
+kubectl create ns csi
+helm repo add csi-secrets-store-provider-azure https://raw.githubusercontent.com/Azure/secrets-store-csi-driver-provider-azure/master/charts
+helm install csi-secrets-store-provider-azure/csi-secrets-store-provider-azure -n csi --generate-name
+
+DELETE # Create a new service principal, be sure to notate the SP secret returned on creation.
+DELETE    az ad sp create-for-rbac --skip-assignment --name ohaks31ServicePrincipal
+
+# Assign the permissions
+# Set environment variables
+export SPNAME=ohaks31ServicePrincipal
+az ad sp create-for-rbac --skip-assignment --name $SPNAME
+## SP credentials {{
+#{
+#  "appId": "100f31ed-8bb6-40cc-866c-d6c9bcab2827",
+#  "displayName": "ohaks31ServicePrincipal",
+#  "name": "http://ohaks31ServicePrincipal",
+#  "password": "tSfVflLw67-4HcY-hNnQ-izOuOUQHadV.T",
+#  "tenant": "ee3322b9-bc75-46e9-bb9a-693966b8ca14"
+#}
+##
+
+export AZURE_CLIENT_ID=$(az ad sp show --id http://${SPNAME} --query appId -o tsv)
+export KEYVAULT_NAME=openhack-kv-team5-nowel
+export KEYVAULT_RESOURCE_GROUP=teamResources
+export SUBID=ce00d046-13be-4fb2-b358-8c7eeba5daa7
+
+
+# Assign Reader Role to the service principal for your keyvault
+az role assignment create --role Reader --assignee $AZURE_CLIENT_ID --scope /subscriptions/$SUBID/resourcegroups/$KEYVAULT_RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$KEYVAULT_NAME
+
+az keyvault set-policy -n $KEYVAULT_NAME --key-permissions get --spn $AZURE_CLIENT_ID
+az keyvault set-policy -n $KEYVAULT_NAME --secret-permissions get --spn $AZURE_CLIENT_ID
+az keyvault set-policy -n $KEYVAULT_NAME --certificate-permissions get --spn $AZURE_CLIENT_ID
+
+# key vault create secret database_password
+# database_password lQ9yh5Oy4
+az keyvault secret set --vault-name $KEYVAULT_NAME --name "database-password" --value "lQ9yh5Oy4"
+
+# View the secret value
+az keyvault secret show --name "database-password" --vault-name $KEYVAULT_NAME
+
+# ATTENTION !!! DANS QUEL NAME SPACE !!!
+# create a secret to get Service Principal credentials 
+# https://github.com/Azure/secrets-store-csi-driver-provider-azure/blob/a4da7f93d13f67e6625d858eb4816496787eeecd/docs/service-principal-mode.md
+kubectl create secret generic secrets-store-creds --from-literal clientid=$AZURE_CLIENT_ID --from-literal clientsecret="tSfVflLw67-4HcY-hNnQ-izOuOUQHadV.T"
+
+# create SecretProviderClass.yaml
+
+# update deployements
+ # https://github.com/Azure/secrets-store-csi-driver-provider-azure/blob/master/examples/nginx-pod-inline-volume-service-principal.yaml
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: sql-password
+
+```
+- name: secrets-store-inline
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+    - name: secrets-store-inline
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: "azure-kvname"
+        nodePublishSecretRef:                       # Only required when using service principal mode
+          name: secrets-store-creds                 # Only required when using service principal mode
+````
+
+
+  # 4 - ingress
