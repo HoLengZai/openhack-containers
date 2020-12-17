@@ -40,10 +40,14 @@ spec:
         - name: SQL_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: secrets
-              key: DB_PASSWORD # database_password
+              name: secrets-provider-class
+              key: database-password-key # database-password
         - name: SQL_DBNAME
           value: "mydrivingDB"
+        volumeMounts:
+        - name: secrets
+          mountPath: /etc/creds
+          readOnly: true
       volumes:
       - name: secrets
         csi:

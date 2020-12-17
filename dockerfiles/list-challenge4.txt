@@ -148,7 +148,7 @@ az keyvault secret show --name "database-password" --vault-name $KEYVAULT_NAME
 # ATTENTION !!! DANS QUEL NAME SPACE !!!
 # create a secret to get Service Principal credentials 
 # https://github.com/Azure/secrets-store-csi-driver-provider-azure/blob/a4da7f93d13f67e6625d858eb4816496787eeecd/docs/service-principal-mode.md
-kubectl create secret generic secrets-store-creds --from-literal clientid=$AZURE_CLIENT_ID --from-literal clientsecret="tSfVflLw67-4HcY-hNnQ-izOuOUQHadV.T"
+kubectl create secret generic secrets-store-creds --from-literal clientid=$AZURE_CLIENT_ID --from-literal clientsecret="tSfVflLw67-4HcY-hNnQ-izOuOUQHadV.T" -n api
 
 # create SecretProviderClass.yaml
 
@@ -177,3 +177,36 @@ kubectl create secret generic secrets-store-creds --from-literal clientid=$AZURE
 
 
   # 4 - ingress
+
+
+```
+# Create a namespace for your ingress resources in namespaces.yaml
+#kubectl create namespace ingress
+
+# Add the ingress-nginx repository
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+
+# Use Helm to deploy an NGINX ingress controller
+helm install nginx-ingress ingress-nginx/ingress-nginx \
+    --namespace ingress \
+    --set controller.replicaCount=2 \
+    --set controller.nodeSelector."beta\.kubernetes\.io/os"=linux \
+    --set defaultBackend.nodeSelector."beta\.kubernetes\.io/os"=linux \
+    --set controller.admissionWebhooks.patch.nodeSelector."beta\.kubernetes\.io/os"=linux
+```
+#create 5-ingress.yaml
+#Note: ingress controller can have its own namespace. all ingress resources need to locate on the same namespace as the service
+# il
+
+
+```
+  service:
+
+    enabled: true
+
+
+
+    annotations:
+
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+```
