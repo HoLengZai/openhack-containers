@@ -16,47 +16,54 @@ spec:
         app: poi-pod
     spec:
       containers:
-      - name: poi
-        image: registrytzs2899.azurecr.io/poi:v0.0.1
-        ports:
-        - containerPort: 80
-        livenessProbe:
-          httpGet:
-            path: /api/poi/healthcheck 
-            port: 80
-          initialDelaySeconds: 3
-          periodSeconds: 3
-        readinessProbe:
-          httpGet:
-            path: /api/poi/healthcheck
-            port: 80
-          initialDelaySeconds: 3
-          periodSeconds: 3
-        env:
-        - name: SQL_SERVER
-          value: "sqlservertzs2899.database.windows.net"
-        - name: SQL_USER
-          value: "sqladmintZs2899"
-        - name: SQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: secrets-provider-class
-              key: database-password-key # database-password
-        - name: SQL_DBNAME
-          value: "mydrivingDB"
-        volumeMounts:
-        - name: secrets
-          mountPath: /etc/creds
-          readOnly: true
+        - name: poi
+          image: registrytzs2899.azurecr.io/poi:v0.0.1
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /api/poi/healthcheck
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /api/poi/healthcheck
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          env:
+            - name: SQL_SERVER
+              value: "sqlservertzs2899.database.windows.net"
+            - name: SQL_USER
+              value: "sqladmintZs2899"
+            - name: SQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets-provider-class
+                  key: database-password-key # database-password
+            - name: SQL_DBNAME
+              value: "mydrivingDB"
+          volumeMounts:
+            - name: secrets
+              mountPath: /etc/creds
+              readOnly: true
       volumes:
-      - name: secrets
-        csi:
-          driver: secrets-store.csi.k8s.io
-          readOnly: true
-          volumeAttributes:
-            secretProviderClass: "azure-kvname"
-          nodePublishSecretRef:                       # Only required when using service principal mode
-            name: secrets-store-creds                 # Only required when using service principal mode
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-kvname"
+            nodePublishSecretRef: # Only required when using service principal mode
+              name: secrets-store-creds # Only required when using service principal mode
 
 ---
 apiVersion: v1

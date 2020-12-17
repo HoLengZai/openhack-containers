@@ -1,0 +1,38 @@
+1. Azure Monitor
+# Enable monitoring addons
+az aks enable-addons -a monitoring -n ohaks31 -g teamResources
+ 
+ #Requests
+How much memory is allocatable per node in your cluster?
+Logs > Query...
+Perf
+| where CounterName == "memoryAllocatableBytes"
+| render timechart
+// Change the Y-Axis to "CounterValue"; Split By "Computer"
+What is the CPU usage of your workload?
+Insights > Cluster > Add Filter > "Namespace"="All but kube-system" > Node CPU Utilization %Logs > Query...
+Perf
+| where CounterPath contains "poi" or CounterPath contains "trip" or CounterPath contains "user"
+| where CounterName == "cpuUsageNanoCores"
+| render timechart
+// Change the Y-Axis to "CounterValue"
+What is the CPU usage of internal Kubernetes tools?
+Insights > Cluster > Add Filter > "Namespace"="kube-system" > Node CPU Utilization %Logs > Query...
+Perf
+| where CounterPath !contains "poi" or CounterPath !contains "trip" or CounterPath !contains "user"
+| where CounterName == "cpuUsageNanoCores"
+| render timechart
+// Change the Y-Axis to "CounterValue"
+How many pods are currently pending?
+Insights > Cluster > Active Pod CountMetrics > Add Metric > Scope=$aksname Namespace="Container service..." Metric="Number of pods by phase" Aggregation=Avg > Apply Splitting > Values="Phase of the pod"Logs > Query...
+KubePodInventory
+| summarize count(PodStatus == "Pending") by TimeGenerated
+| render timechart
+
+2. Create insurance deployments
+
+az aks get-credentials --resource-group teamResources --name ohaks31
+az aks get-credentials --resource-group teamResources --name ohaks31 --overwrite-existing
+
+3. Mise en oeuvre de l'autoscaling AKS
+az aks update --resource-group teamResources --name ohaks31 --update-cluster-autoscaler --min-count 2 --max-count 10

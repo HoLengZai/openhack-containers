@@ -16,31 +16,38 @@ spec:
         app: user-java-pod
     spec:
       containers:
-      - name: user-java
-        image: registrytzs2899.azurecr.io/user-java:v0.0.1
-        ports:
-        - containerPort: 80
-        livenessProbe:
-          httpGet:
-            path: /api/user-java/healthcheck
-            port: 80
-          initialDelaySeconds: 3
-          periodSeconds: 3
-        readinessProbe:
-          httpGet:
-            path: /api/user-java/healthcheck
-            port: 80
-          initialDelaySeconds: 3
-          periodSeconds: 3
-        env:
-        - name: SQL_SERVER
-          value: "sqlservertzs2899.database.windows.net"
-        - name: SQL_USER
-          value: "sqladmintZs2899"
-        - name: SQL_PASSWORD
-          value: "lQ9yh5Oy4"
-        - name: SQL_DBNAME
-          value: "mydrivingDB"
+        - name: user-java
+          image: registrytzs2899.azurecr.io/user-java:v0.0.1
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /api/user-java/healthcheck
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /api/user-java/healthcheck
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          env:
+            - name: SQL_SERVER
+              value: "sqlservertzs2899.database.windows.net"
+            - name: SQL_USER
+              value: "sqladmintZs2899"
+            - name: SQL_PASSWORD
+              value: "lQ9yh5Oy4"
+            - name: SQL_DBNAME
+              value: "mydrivingDB"
 ---
 apiVersion: v1
 kind: Service
